@@ -2,105 +2,158 @@ package httpserver;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.util.Iterator;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.util.NoSuchElementException;
 
 public class HttpRequest {
-    public HttpRequest(SocketChannel socketChannel) {
+    HttpRequestHeader clientRequestHeader;
+    byte[] clientRequestBody;
+    public HttpRequest(Socket clientSocket) throws IOException {
+        clientRequestHeader = new HttpRequestHeader(clientSocket);
+        System.out.println(clientRequestHeader.method);
 
+        ByteArrayOutputStream result = new ByteArrayOutputStream();
+        if ("100-continue".equals(clientRequestHeader.expect)) {
+            while ("100-continue".equals(clientRequestHeader.expect)) {
+                System.out.println("HERE!");
+                OutputStream out = clientSocket.getOutputStream();
+                out.write("HTTP/1.1 100 Continue".getBytes());
+                clientRequestHeader = new HttpRequestHeader(clientSocket);
+                byte[] buffer = new byte[clientRequestHeader.contentLength];
+                InputStream in = clientSocket.getInputStream();
+                in.read(buffer);
+                result.write(buffer);
+            }
+        } else if (clientRequestHeader.contentLength > 0) {
+            byte[] buffer = new byte[clientRequestHeader.contentLength];
+            InputStream in = clientSocket.getInputStream();
+            in.read(buffer);
+            result.write(buffer);
+        }
+        clientRequestBody = result.toByteArray();
+    }
+
+    public String toString() {
+        return clientRequestHeader.toString() + new String(clientRequestBody) + "\r\n\r\n";
     }
     public class HttpRequestHeader {
         private String method;
         private String target;
         private String version;
         private String contentType;
-        private String contentLength;
+        private int contentLength;
         private String expect;
-        private Iterator<String> requestBody;
 
-        public HttpRequestHeader(String rawRequestHeader) throws ShittyError {
-            Iterator<String> headerLines = rawRequestHeader.lines().iterator();
-
+        public HttpRequestHeader(Socket clientSocket) throws IOException {
+            final int MAX_REQUEST_PARAM_LEN = 1024 * 8;
+            InputStream incomingRequest = clientSocket.getInputStream();
             try {
-                String[] startLine = headerLines.next().split(" ");
-                method = startLine[0];
-                target = startLine[1];
-                version = startLine[2]; 
-            } catch (NoSuchElementException err) {
-                throw new ShittyError("Invalid Request.");
-            } catch (ArrayIndexOutOfBoundsException err) {
-                throw new ShittyError("Invalid Request.");
-            }
-            
-            while (headerLines.hasNext()) {
-                String line = headerLines.next();
-                if (line.isBlank()) { 
-                    requestBody = headerLines;
-                    break;
+                String startLine =  HttpRequest.readLineFromStream(incomingRequest, MAX_REQUEST_PARAM_LEN);
+                System.out.println(startLine);
+                String[] lineParts = startLine.split(" ");
+                if (!"GET".equals(lineParts[0]) && !"POST".equals(lineParts[0])) {
+                    throw new ShittyError("Invalid Request or unsupported request method");
                 }
-                String[] lineParts = line.split(":", 1);
+                method = lineParts[0].strip();
+                target = lineParts[1].strip();
+                version = lineParts[2].strip();
+            } catch (ShittyError err) {
+                OutputStream out = clientSocket.getOutputStream();
+                out.write("HTTP/1.1 413 Content Too Large".getBytes());
+            } catch (NoSuchElementException err) {
+                OutputStream out = clientSocket.getOutputStream();
+                out.write("HTTP/1.1 400 Bad Request".getBytes());
+            }
+
+            String requestLine = "";
+            try {
+                requestLine = HttpRequest.readLineFromStream(incomingRequest, MAX_REQUEST_PARAM_LEN);
+            } catch (ShittyError err) {
+                OutputStream out = clientSocket.getOutputStream();
+                out.write("HTTP/1.1 413 Content Too Large".getBytes());
+            }
+            while (!requestLine.isBlank()) {
+                String[] lineParts = requestLine.split(":", 2);
+                System.out.println(lineParts[0]);
                 switch (lineParts[0]) {
+                    case "Expect":
+                        expect = lineParts[1].strip();
+                        break;
                     case "Content-Type":
                         contentType = lineParts[1].strip();
                         break;
                     case "Content-Length":
-                        contentLength = lineParts[1].strip();
+                        contentLength = Integer.parseInt(lineParts[1].strip());
                         break;
-                    case "Expect":
-                        expect = lineParts[1].strip();
-                        break;
+                }
+                try {
+                    requestLine = HttpRequest.readLineFromStream(incomingRequest, MAX_REQUEST_PARAM_LEN);
+                } catch (ShittyError err) {
+                    OutputStream out = clientSocket.getOutputStream();
+                    out.write("HTTP/1.1 413 Content Too Large".getBytes());
                 }
             }
         }
-
-        public Iterator<String> getRemainingRequestBody() {
-            return requestBody;
-        }
-    }
-    
-    public class HttpRequestBody {
-        public String requestBody;
-        public HttpRequestBody(HttpRequestHeader requestHeader) {
-            Iterator<String> remainingBody = requestHeader.getRemainingRequestBody();
+        public String toString() {
             StringBuilder result = new StringBuilder();
-            while (remainingBody.hasNext()) {
-                result.append(remainingBody.next());
+            result.append(String.format("%s %s %s\r\n", method, target, version));
+            if (contentType != null) {
+                result.append(String.format("Content-Type: %s\r\n", contentType));
             }
-            requestBody = result.toString();
+            if (contentLength != 0) {
+                result.append(String.format("Content-Length: %d\r\n", contentLength));
+            }
+            if (expect != null) {
+                result.append(String.format("Expect: %s\r\n", expect));
+            }
+            result.append("\r\n");
+            return result.toString();
+        }
+
+        public String getMethod() {
+            return method;
+        }
+
+        public String getTarget() {
+            return target;
+        }
+
+        public String getVersion() {
+            return version;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+
+        public int getContentLength() {
+            return contentLength;
+        }
+
+        public String getExpect() {
+            return expect;
         }
     }
-    /**
-    * Reads the HTTP request header from the Sockets Channel up to a length of
-    * BUFFER_SIZE. This limit is in place to avoid clients sending a infinitely
-    * long request and therefore blocking the executing thread indefinitly.
-    * Instead an Error is thrown and the Client receives a response with the
-    * 413 Status Code.
-    * If the request header could be read successfully, it is returned as a 
-    * String.
-    * @param    socketChannel   the Client Sockets channel the header is read
-    *                           from
-    * @return                   the request header as String
-    * @throws   IOException     if reading from socketChannel failes 
-    * @throws   ShittyError     if the header exceeds a reasonable length
-    */
-    private static String readRequestHeader(SocketChannel socketChannel) throws IOException, ShittyError {
-        final int BUFFER_SIZE = 1024 * 800 + 1;
-        ByteBuffer buffer = ByteBuffer.allocate(BUFFER_SIZE);
-        int numOfBytesRead = socketChannel.read(buffer);
 
-        if (numOfBytesRead == BUFFER_SIZE) {
-            byte[] response = "HTTP/1.1 413 Content Too Large".getBytes();
-            socketChannel.write(ByteBuffer.allocate(response.length).put(response));    
-            throw new ShittyError("Incoming Http Client Request was too long.");
+    private static String readLineFromStream(InputStream in, int maxLineSize) throws IOException, ShittyError {
+        ByteArrayOutputStream resultLine = new ByteArrayOutputStream();
+        byte[] buffer = new byte[maxLineSize + 1];
+        int pos = 1;
+        in.read(buffer, 0, 1);
+        byte carriageReturn = "\r".getBytes()[0];
+        byte lineFeed = "\n".getBytes()[0];
+        while (in.read(buffer, pos, 1) != -1) {
+            if (buffer[pos - 1] == carriageReturn && buffer[pos] == lineFeed) {
+                resultLine.write(buffer, 0, pos);
+                break;
+            } 
+            pos++;
+            if (pos == maxLineSize + 1) {
+                throw new ShittyError("Number of read bytes has exceeded the maximum line length");
+            }
         }
-
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        byte[] resultBuffer = new byte[BUFFER_SIZE - 1];
-        buffer.get(resultBuffer);
-        result.write(resultBuffer, 0, numOfBytesRead);
-
-        return result.toString();
+        System.out.println(resultLine);
+        return resultLine.toString();
     }
 }

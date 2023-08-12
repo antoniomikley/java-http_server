@@ -1,19 +1,9 @@
 package httpserver;
 
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.stream.Stream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.ServerSocket;
 
 public class App {
@@ -50,13 +40,7 @@ public class App {
     public static void main(String[] args) throws IOException {
         
         Socket clientSocket = createSocket(8080);
-        InputStream inputStream = clientSocket.getInputStream();
-        OutputStream outputStream = clientSocket.getOutputStream();
-        
-
-        Path filePath = Paths.get(FILEROOT + "index.html");
-
-        Iterator<String> htmlFile = Files.lines(filePath).iterator();
-        System.out.println(streamToString(inputStream));
+        HttpRequest test = new HttpRequest(clientSocket);
+        System.out.println(test.toString());
     }
 }
