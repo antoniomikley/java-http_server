@@ -52,7 +52,7 @@ public class HttpRequest {
                 String startLine =  HttpRequest.readLineFromStream(incomingRequest, MAX_REQUEST_PARAM_LEN);
                 System.out.println(startLine);
                 String[] lineParts = startLine.split(" ");
-                if (!"GET".equals(lineParts[0]) && !"POST".equals(lineParts[0])) {
+                if (!"GET".equals(lineParts[0]) && !"POST".equals(lineParts[0]) && !"HEAD".equals(lineParts[0])) {
                     throw new ShittyError("Invalid Request or unsupported request method");
                 }
                 method = lineParts[0].strip();
