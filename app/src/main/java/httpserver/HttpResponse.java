@@ -45,8 +45,9 @@ public class HttpResponse {
             } catch (IOException err) {
                 System.err.println("Could not read requested File.");
             }
-        } 
-        response.statusCode = "501 Not Implemented";
+        } else {
+            response.statusCode = "501 Not Implemented";
+        }
         return response;
     }
 
