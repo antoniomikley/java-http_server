@@ -1,32 +1,43 @@
 package httpserver;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.util.NoSuchElementException;
 
 public class HttpRequest {
-    HttpRequestHeader clientRequestHeader;
-    byte[] clientRequestBody;
-    public HttpRequest(Socket clientSocket) throws IOException {
-        clientRequestHeader = new HttpRequestHeader().readRequestHeader(clientSocket);
+    HttpRequestHeader requestHeader;
+    byte[] requestBody;
+    
+    public HttpRequest(HttpRequestHeader requestHeader) {
+        this.requestHeader = requestHeader;
+    } 
+    
+    public HttpRequest(HttpRequestHeader requestHeader, byte[] requestBody) {
+        this.requestHeader = requestHeader;
+        this.requestBody = requestBody;
+    }
+    
+}
 
-        ByteArrayOutputStream result = new ByteArrayOutputStream();
-        if ("100-continue".equals(clientRequestHeader.expect)) {
-            while ("100-continue".equals(clientRequestHeader.expect)) {
-                OutputStream out = clientSocket.getOutputStream();
-                out.write("HTTP/1.1 100 Continue".getBytes());
-                clientRequestHeader = new HttpRequestHeader().readRequestHeader(clientSocket);
+
+    /*
+    public class HttpRequest {
+        HttpRequestHeader clientRequestHeader;
+        byte[] clientRequestBody;
+        public HttpRequest(Socket clientSocket) throws IOException {
+            clientRequestHeader = new HttpRequestHeader().readRequestHeader(clientSocket);
+
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            if ("100-continue".equals(clientRequestHeader.expect)) {
+                while ("100-continue".equals(clientRequestHeader.expect)) {
+                    OutputStream out = clientSocket.getOutputStream();
+                    out.write("HTTP/1.1 100 Continue".getBytes());
+                    clientRequestHeader = new HttpRequestHeader().readRequestHeader(clientSocket);
+                    byte[] buffer = new byte[clientRequestHeader.contentLength];
+                    InputStream in = clientSocket.getInputStream();
+                    in.read(buffer);
+                    result.write(buffer);
+                }
+            } else if (clientRequestHeader.contentLength > 0) {
                 byte[] buffer = new byte[clientRequestHeader.contentLength];
                 InputStream in = clientSocket.getInputStream();
                 in.read(buffer);
-                result.write(buffer);
-            }
-        } else if (clientRequestHeader.contentLength > 0) {
-            byte[] buffer = new byte[clientRequestHeader.contentLength];
-            InputStream in = clientSocket.getInputStream();
-            in.read(buffer);
             result.write(buffer);
         }
         clientRequestBody = result.toByteArray();
@@ -75,7 +86,7 @@ public class HttpRequest {
             }
             while (!requestLine.isBlank()) {
                 String[] lineParts = requestLine.split(":", 2);
-                switch (lineParts[0]) {
+                s#@witch (lineParts[0]) {
                     case "Expect":
                         requestHeader.expect = lineParts[1].strip();
                         break;
@@ -156,4 +167,4 @@ public class HttpRequest {
         }
         return resultLine.toString();
     }
-}
+}*/

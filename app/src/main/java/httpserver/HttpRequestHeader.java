@@ -13,7 +13,7 @@ public class HttpRequestHeader {
     private String httpVersion;
     private String contentType;
     private long contentLength;
-    private String except;
+    private String expect;
     private String httpErrorCode;
 
     /**
@@ -45,8 +45,8 @@ public class HttpRequestHeader {
                     case "Content-Length":
                         requestHeader.contentLength = Long.parseLong(lineParts[1].strip());
                         break;
-                    case "Except":
-                        requestHeader.except = lineParts[1].strip();
+                    case "Expect":
+                        requestHeader.expect = lineParts[1].strip();
                         break;
                 }
             }
@@ -55,6 +55,35 @@ public class HttpRequestHeader {
             return requestHeader;
         }
         return requestHeader;
+    }
+    
+    // Getters.. wow
+    public String getRequestMethod() {
+        return requestMethod;
+    }
+
+    public String getTarget() {
+        return target;
+    }
+
+    public String getHttpVersion() {
+        return httpVersion;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public long getContentLength() {
+        return contentLength;
+    }
+
+    public String getExpect() {
+        return expect;
+    }
+
+    public String getHttpErrorCode() {
+        return httpErrorCode;
     }
 
     /**
@@ -92,6 +121,7 @@ public class HttpRequestHeader {
                 "400 Bad Request",
                 "Stream contents did not contain a CRLF.");
     }
+
     /**
     * Sets the Http Request Method, Request Target and Http Version for the 
     * HttpRequestHeader by inspecting the given String.
@@ -99,7 +129,6 @@ public class HttpRequestHeader {
     * @thros    HttpRequestException    if startLine does not contain the first
     *                                   line of a http request with valid syntax
     */
-    
     private void parseStartLine(String startLine) throws HttpRequestException {
         String[] lineParts = startLine.split(" ");
         

@@ -1,10 +1,7 @@
 package httpserver;
 
-import java.net.Socket;
-import java.util.Timer;
-import java.io.IOException;
-import java.net.ServerSocket;
 
+    /*
 public class App {
     static Socket createSocket(int port) {
         Socket clientSocket = null;
@@ -31,4 +28,4 @@ public class App {
             handleRequest();
         }
     }
-}
+}*/
