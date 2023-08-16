@@ -32,8 +32,9 @@ public class HttpRequestHeader {
 
         try {
             requestHeader.parseStartLine(readFromStreamUntilCRLF(in));
+            System.out.println("1");
             for (String requestLine; !(requestLine = readFromStreamUntilCRLF(in)).isBlank();) {
-                String[] lineParts = requestLine.split(": ", 2);
+                String[] lineParts = requestLine.split(":", 2);
                 if (lineParts.length != 2) {
                     requestHeader.httpErrorCode = "400 Bad Request";
                     return requestHeader;
@@ -117,6 +118,7 @@ public class HttpRequestHeader {
                         "Could not read the line from Stream since its length exceeds the set limit.");
             }
         }
+        System.out.println(new String(buffer, 0, pos));
         throw new HttpRequestException(
                 "400 Bad Request",
                 "Stream contents did not contain a CRLF.");
@@ -131,6 +133,9 @@ public class HttpRequestHeader {
     */
     private void parseStartLine(String startLine) throws HttpRequestException {
         String[] lineParts = startLine.split(" ");
+        System.out.println(lineParts[0]);
+        System.out.println(lineParts[1]);
+        System.out.println(lineParts[2]);
         
         if (lineParts.length != 3) {
             throw new HttpRequestException(
@@ -142,7 +147,7 @@ public class HttpRequestHeader {
                     "501 Not Implemented",
                     "The requests method is invalid or not supported.");
         }
-        if (!(SUPPORTED_VERSIONS.contains(lineParts[2]))) {
+        if (!(SUPPORTED_VERSIONS.contains(lineParts[2].strip()))) {
             throw new HttpRequestException(
                     "503 HTTP Version Not Supported",
                     "The requests http vesion is not supported by the server.");
@@ -150,6 +155,6 @@ public class HttpRequestHeader {
 
         this.requestMethod = lineParts[0];
         this.target = lineParts[1];
-        this.httpVersion = lineParts[2];
+        this.httpVersion = lineParts[2].strip();
     }
 }

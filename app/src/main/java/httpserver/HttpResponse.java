@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Paths;
 
 public class HttpResponse {
@@ -45,6 +46,7 @@ public class HttpResponse {
             return response;
         } else if (requestHeader.getExpect() != null) {
             response.statusCode = "417 Expectation Failed";
+            return response;
         }
         // In case all is well, we can try reading in the requested file.
         try {
@@ -64,6 +66,24 @@ public class HttpResponse {
             return response;
         }
         return response;
+    }
+
+    /**
+    * Writes the HttpResponse to an OutputStream. Preferably the one that 
+    * belongs to the same Socket the request was read from.
+    * @param   out the OutputStream the response is written to
+    * @throws  IOException if writing to the stream fails, possibly because
+    *                      the client closed the socket
+    */ 
+    public void send(OutputStream out) throws IOException {
+        System.out.println(responseHeadersToString());
+        out.write(responseHeadersToString().getBytes());
+            out.write("\r\n".getBytes());
+        if (responseBody != null) {
+            out.write(responseBody);
+            out.write("\r\n".getBytes());
+        }
+        out.write("\r\n".getBytes());
     }
     /**
     * Produces a String representation of the HttpResponse object formated 
