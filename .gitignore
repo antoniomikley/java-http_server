@@ -6,5 +6,5 @@ shell.nix
 build
 .settings
 bin
-main/resources
+resources
 gradlew
