@@ -6,6 +6,7 @@ import java.util.Set;
 
 public class HttpRequestHeader {
     private static final int MAX_HEADER_SIZE = 1024 * 8;
+    private static final int MAX_HEADER_COUNT = 100;
     private static final Set<String> SUPPORTED_METHODS = Set.of("GET", "HEAD");
     private static final Set<String> SUPPORTED_VERSIONS = Set.of("HTTP/1.1");
     private String requestMethod;
@@ -32,7 +33,13 @@ public class HttpRequestHeader {
 
         try {
             requestHeader.parseStartLine(readFromStreamUntilCRLF(in));
+            int headerCount = 0;
             for (String requestLine; !(requestLine = readFromStreamUntilCRLF(in)).isBlank();) {
+                if (headerCount == MAX_HEADER_COUNT) {
+                    requestHeader.httpErrorCode = "431 Request Header Fields Too Large";
+                    return requestHeader;
+                }
+                headerCount ++;
                 String[] lineParts = requestLine.split(":", 2);
                 if (lineParts.length != 2) {
                     requestHeader.httpErrorCode = "400 Bad Request";
@@ -105,7 +112,9 @@ public class HttpRequestHeader {
         byte[] buffer = new byte[MAX_HEADER_SIZE + 1];
         int pos = 1;
 
-        in.read(buffer, 0, 1);
+        if (in.read(buffer, 0, 1) <= 0) {
+            return "";
+        }
         while (in.read(buffer, pos, 1) != -1) {
             if (buffer[pos - 1] == CRLF[0] && buffer[pos] == CRLF[1]) {
                 return new String(buffer, 0, pos + 1);
@@ -144,7 +153,7 @@ public class HttpRequestHeader {
         }
         if (!(SUPPORTED_VERSIONS.contains(lineParts[2].strip()))) {
             throw new HttpRequestException(
-                    "503 HTTP Version Not Supported",
+                    "505 HTTP Version Not Supported",
                     "The requests http vesion is not supported by the server.");
         }
 
