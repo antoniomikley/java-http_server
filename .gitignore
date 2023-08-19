@@ -1,0 +1,10 @@
+.gradle
+.envrc
+shell.nix
+.direnv
+.gitattributes
+build
+.settings
+bin
+main/resources
+gradlew
