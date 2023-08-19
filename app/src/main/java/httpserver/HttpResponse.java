@@ -76,7 +76,6 @@ public class HttpResponse {
     *                      the client closed the socket
     */ 
     public void send(OutputStream out) throws IOException {
-        System.out.println(responseHeadersToString());
         out.write(responseHeadersToString().getBytes());
             out.write("\r\n".getBytes());
         if (responseBody != null) {
