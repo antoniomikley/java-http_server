@@ -19,8 +19,8 @@ public class RequestHandler implements Runnable {
                 Socket clientSocket = requestQueue.take();
                 InputStream in = clientSocket.getInputStream();
                 OutputStream out = clientSocket.getOutputStream();
-                HttpRequestHeader requestHeader = new HttpRequestHeader().createFromStream(in);
-                HttpResponse response = new HttpResponse().createResponseFromHeader(requestHeader);
+                HttpRequestHeader requestHeader = HttpRequestHeader.createFromStream(in);
+                HttpResponse response = HttpResponse.createResponseFromHeader(requestHeader);
                 response.send(out);
                 clientSocket.close();
             }
